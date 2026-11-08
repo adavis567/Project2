@@ -1,1 +1,33 @@
+PROJECT 2 - CONTRIBUTIONS
 
+TEAM MEMBERS AND MODULE OWNERSHIP
+
+Anthony Davis
+
+* Responsible for facility record management.
+* Implements the custom string hash function and hash table using separate chaining.
+* Implements facility ID lookup, complete-name search, category search, and the facility category report.
+* Reviews and tests integrated facility functionality.
+
+Caleb Harper
+
+* Responsible for the campus graph module.
+* Implements building and connection handling, adjacency relationships, graph display and statistics, BFS reachability, shortest paths, and the graph connectivity report.
+* Coordinates the main menu and integration of the modules.
+
+Eyob Tesfay
+
+* Responsible for the department general-tree module.
+* Implements department loading and validation, adding and searching departments, hierarchy display, preorder, postorder, level-order, and department statistics.
+* Implements appropriate tree memory cleanup.
+
+SHARED RESPONSIBILITIES
+
+All team members contribute to:
+
+* Coordinating module interfaces and integration.
+* Reviewing teammates’ code and identifying potential issues.
+* Testing the integrated program and resolving errors.
+* Maintaining project documentation.
+* Ensuring the GitHub repository and final submitted ZIP contain matching files.
+* Compiling and testing the project on the UNT CSE CELL machines.

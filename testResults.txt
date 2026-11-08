@@ -1,0 +1,94 @@
+Project 2 — Test Results
+
+Smart Campus Navigation and Facility Analytics System
+
+Project: Smart Campus Navigation and Facility Analytics System
+Course: Data Structures and Algorithms
+Team Members: Anthony Davis, Caleb Harper, Eyob Tesfay
+
+⸻
+
+1. Test Environment
+
+The project was compiled and executed successfully. All required features and test cases were checked using the provided datasets and custom test data.
+
+Build Command:
+
+make
+
+Run Command:
+
+./campus
+
+Custom Test Data:
+
+./campus testdata/collision_test
+
+2. Milestone 1 Testing
+
+Test ID	Description	Result
+M1-01	Load building records from file	PASS
+M1-02	Load connection records from file	PASS
+M1-03	Load facility records from file	PASS
+M1-04	Load department records from file	PASS
+M1-05	Handle missing input files	PASS
+M1-06	Handle blank lines and comments	PASS
+M1-07	Validate malformed records	PASS
+M1-08	Display loading summaries	PASS
+M1-09	Insert facilities into the custom hash table	PASS
+M1-10	Handle hash collisions using separate chaining	PASS
+M1-11	Reject duplicate facility IDs	PASS
+M1-12	Search for facilities by ID	PASS
+M1-13	Search facilities by complete name and category	PASS
+M1-14	Build the campus graph using adjacency lists	PASS
+M1-15	Perform BFS reachability searches	PASS
+M1-16	Find shortest paths using BFS	PASS
+M1-17	Display graph statistics	PASS
+M1-18	Build the department general tree	PASS
+M1-19	Search for departments	PASS
+M1-20	Display department hierarchy	PASS
+M1-21	Perform preorder traversal	PASS
+M1-22	Perform postorder traversal	PASS
+M1-23	Perform level-order traversal	PASS
+M1-24	Handle multiword and blank department names	PASS
+
+3. Final Testing
+
+Test ID	Description	Result
+F-01	Handle missing input files	PASS
+F-02	Handle empty input files	PASS
+F-03	Handle malformed records	PASS
+F-04	Handle whitespace and comments	PASS
+F-05	Search for existing facility IDs	PASS
+F-06	Search for nonexistent facility IDs	PASS
+F-07	Search facilities by complete name	PASS
+F-08	Search facilities by category	PASS
+F-09	Generate facility category reports	PASS
+F-10	Find paths between connected buildings	PASS
+F-11	Handle unreachable buildings	PASS
+F-12	Calculate graph vertex and edge counts	PASS
+F-13	Identify highest-degree buildings	PASS
+F-14	Identify isolated buildings	PASS
+F-15	Calculate connected components	PASS
+F-16	Verify department tree traversals	PASS
+F-17	Calculate department statistics	PASS
+F-18	Verify CELL compilation	PASS
+F-19	Check memory management and cleanup	PASS
+F-20	Verify project ZIP contents	PASS
+
+4. Test Summary
+
+Category	Total Tests	Passed	Failed
+Milestone 1	24	24	0
+Final Testing	20	20	0
+Total	44	44	0
+
+Overall Result: PASS
+
+All 44 test cases passed. The project successfully compiled and ran, and the required facility management, custom hash table, campus graph, BFS, department tree, reporting, and file-loading functionality worked as expected.
+
+5. Conclusion
+
+The Smart Campus Navigation and Facility Analytics System successfully completed its testing. All required features were verified, including facility lookup, collision handling, graph navigation, shortest-path searches, department hierarchy operations, and analytics reports.
+
+No test failures were reported. The project is considered complete and ready for submission.

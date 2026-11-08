@@ -1,1 +1,122 @@
+SMART CAMPUS NAVIGATION AND FACILITY ANALYTICS SYSTEM
 
+DESIGN DOCUMENT
+
+1. FACILITY STORAGE AND CUSTOM HASH TABLE
+
+Facility records contain an ID, name, building, and category. Accepted facilities are stored in a vector in the same order they appear in facilities.txt. The facility ID hash table stores each normalized ID alongside its corresponding facility vector index. This preserves the original file order while allowing efficient ID lookup.
+
+Before validation, hashing, insertion, comparison, or display, each facility ID is trimmed and converted to uppercase. A valid ID consists of the letter F followed by exactly three digits.
+
+The custom hash function uses a polynomial string hash. Starting with h = 0, each character c updates the hash as:
+
+h = (31 * h + unsigned_value(c)) % capacity
+
+The table capacity is 101. The hash function uses the characters of the normalized uppercase ID and returns an index between 0 and capacity - 1. The implementation does not use std::hash.
+
+Collision handling uses separate chaining. Each table index stores a vector of entries. When a new accepted ID maps to a bucket that already contains an entry, one collision is counted. Duplicate IDs are rejected before collision counting and do not increase the collision total.
+
+Separate chaining was selected because each bucket can grow as needed without imposing an arbitrary maximum number of facilities.
+
+The hash table reports its capacity, number of accepted entries, and total collisions encountered during loading.
+
+2. CAMPUS GRAPH
+
+The campus graph uses an adjacency list to represent buildings and their connections. Each accepted building is represented as a vertex, and each vertex stores its neighboring buildings in connection-file insertion order.
+
+Connections are undirected. When a connection between buildings A and B is accepted, B is added to A’s adjacency list, and A is added to B’s adjacency list. Each connection is counted only once.
+
+An adjacency list was selected because it stores only existing connections and allows efficient neighbor traversal.
+
+Breadth-First Search (BFS) uses a queue and a visited structure. A building is marked visited when it is added to the queue. Distances represent the number of connections from the starting building.
+
+For shortest-path searches, BFS records the parent of each discovered building and reconstructs the path from the destination back to the starting building. When multiple shortest paths exist, neighbor insertion order determines which path is selected.
+
+The graph also calculates building degrees, total buildings, total connections, isolated buildings, and connected components.
+
+3. DEPARTMENT GENERAL TREE
+
+The department hierarchy uses a general tree in which each node can have any number of children. Each department node stores its name and a vector of child pointers. This structure preserves sibling insertion order.
+
+The first valid department record becomes the root and must use NONE as its parent. Every subsequent department must reference a parent that was accepted earlier in the file. Department names must be unique regardless of capitalization.
+
+The tree supports department insertion, searching, hierarchy display, and three traversal methods:
+
+* Preorder: Visits the current department before its children.
+* Postorder: Visits all children before the current department.
+* Level-order: Uses a queue to visit departments level by level while preserving sibling insertion order.
+
+Department statistics include the total number of departments, number of leaf departments, and tree height. Tree height is the maximum number of edges from the root to any leaf. An empty tree has zero departments, zero leaves, and a height of N/A. A root-only tree has a height of zero.
+
+Dynamically allocated department nodes are released when the tree is destroyed.
+
+4. FILE LOADING AND VALIDATION
+
+The program loads four input files from the selected data directory in the following order:
+
+1. buildings.txt
+2. connections.txt
+3. facilities.txt
+4. departments.txt
+
+Each record is read as a complete line using getline. Blank lines and comment lines are ignored. Whitespace around fields is trimmed while internal spaces are preserved. A comment line is identified by its first non-whitespace character being #.
+
+Records are validated before insertion. Invalid records are rejected, and a warning identifies the filename, line number, and reason for rejection. Loading continues after rejected records.
+
+If a file cannot be opened, the program displays an error naming the file and treats it as empty.
+
+After each file is processed, the program displays a summary containing the number of accepted and rejected records. The facilities summary also includes hash-table capacity, entries, and collisions.
+
+5. REPORTS
+
+The facility category report groups categories without regard to capitalization. It preserves the spelling of the first accepted occurrence of each category and calculates the percentage of accepted facilities belonging to each category.
+
+Percentages are displayed to one decimal place. The report includes the total facility count and handles an empty facility database without dividing by zero.
+
+The graph connectivity report displays the total number of buildings, total undirected connections, every building tied for the highest degree, isolated buildings, and the number of connected components.
+
+Each isolated building counts as its own connected component. The report uses the same adjacency-list representation as the other graph operations.
+
+6. PROJECT MODULES AND RESPONSIBILITIES
+
+The project is organized into separate modules to keep the implementation organized and maintainable.
+
+Anthony Davis — Facility Management and Hash Table
+
+* Facility record management and validation.
+* Custom string hash function.
+* Hash table implementation using separate chaining.
+* Facility ID lookup.
+* Complete facility name search.
+* Facility category search.
+* Facility category report.
+
+Caleb Harper — Campus Graph
+
+* Building and connection management.
+* Undirected graph implementation using adjacency lists.
+* BFS reachability.
+* BFS shortest-path implementation.
+* Building counts and degree calculations.
+* Graph connectivity report.
+* Main program integration and menu coordination.
+
+Eyob Tesfay — Department Tree
+
+* General tree implementation.
+* Department file loading and validation.
+* Department insertion and searching.
+* Department hierarchy display.
+* Preorder, postorder, and level-order traversals.
+* Department statistics.
+* Dynamic memory cleanup.
+
+Shared Responsibilities
+
+All team members contribute to testing, debugging, code reviews, documentation, GitHub integration, and the final demonstration.
+
+7. MEMORY MANAGEMENT
+
+The department tree uses dynamically allocated nodes. Its destructor releases all nodes when the tree is destroyed, including their child nodes.
+
+Standard C++ containers such as vectors, strings, and queues are used where appropriate. The project avoids arbitrary fixed-size arrays and uses dynamically sized structures to accommodate different input datasets.
