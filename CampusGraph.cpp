@@ -1,1 +1,10 @@
-
+loadBuildings()
+loadConnections()
+findBuilding()
+addBuilding()
+addConnection()
+displayGraph()
+displayStatistics()
+bfsReachable()
+shortestPath()
+connectivityReport()
