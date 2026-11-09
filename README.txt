@@ -21,36 +21,22 @@ The program allows users to:
 * Find shortest paths between campus buildings.
 * Add and search academic departments.
 * Display department hierarchies and tree traversals.
-* View department statistics and facility and graph reports.
+* View department statistics, facility category reports, and graph connectivity reports.
 
 DIRECTORY LAYOUT
 
 Project2/
-|-- include/
-|   |-- Facility.h
-|   |-- HashTable.h
-|   |-- CampusGraph.h
-|   |-- DepartmentTree.h
-|   `-- FileLoader.h
-|-- src/
-|   |-- main.cpp
-|   |-- Facility.cpp
-|   |-- HashTable.cpp
-|   |-- CampusGraph.cpp
-|   |-- DepartmentTree.cpp
-|   `-- FileLoader.cpp
-|-- data/
-|   |-- buildings.txt
-|   |-- connections.txt
-|   |-- facilities.txt
-|   `-- departments.txt
-|-- testdata/
-|-- README.txt
-|-- CONTRIBUTIONS.txt
-|-- design_document.txt
-|-- test_results.txt
-|-- Makefile
-`-- .gitignore
+|– include/
+|   |– Facility.h
+|   |– HashTable.h
+|   |– CampusGraph.h
+|   |– DepartmentTree.h
+|   -- FileLoader.h |-- src/ |   |-- main.cpp |   |-- Facility.cpp |   |-- HashTable.cpp |   |-- CampusGraph.cpp |   |-- DepartmentTree.cpp |   – FileLoader.cpp
+|– data/
+|   |– buildings.txt
+|   |– connections.txt
+|   |– facilities.txt
+|   -- departments.txt |-- testdata/ |-- README.txt |-- CONTRIBUTIONS.txt |-- design_document.txt |-- test_results.txt |-- Makefile – .gitignore
 
 BUILDING THE PROGRAM
 
@@ -58,9 +44,15 @@ From the Project2 root directory, run:
 
 make
 
-The Makefile uses g++ with C++17 and compiler warning flags.
+The Makefile compiles the project using g++ and the C++17 standard with the following warning flags:
 
-To remove the generated executable and object files, run:
+* Wall
+* Wextra
+* pedantic
+
+Header files are stored in include/, and source files are stored in src/.
+
+To remove generated object files and the executable, run:
 
 make clean
 
@@ -74,7 +66,9 @@ To run using a different data directory:
 
 ./campus testdata/collision_test
 
-The optional directory argument allows the program to load different datasets without modifying the source code. Directory paths are relative to the current working directory.
+The optional directory argument allows the program to load different datasets without modifying the source code.
+
+Directory paths are relative to the current working directory.
 
 INPUT FILES
 
@@ -85,13 +79,15 @@ The program loads the following four files in order:
 3. facilities.txt
 4. departments.txt
 
-The instructor-provided files are stored in the data/ directory and remain unchanged.
+The default input files are stored in the data/ directory.
 
 Additional testing datasets are stored in separate subdirectories of testdata/.
 
+The program validates input records, rejects invalid or duplicate records, and reports accepted and rejected record counts for each file.
+
 IMPLEMENTATION OVERVIEW
 
-The project is organized into separate modules:
+The project is organized into separate modules.
 
 Facility and HashTable
 
@@ -110,7 +106,7 @@ CampusGraph
 
 DepartmentTree
 
-* Implements the general department tree.
+* Implements a general department tree that supports multiple children per node.
 * Supports department insertion and searching.
 * Displays the department hierarchy.
 * Implements preorder, postorder, and level-order traversals.
@@ -120,9 +116,9 @@ FileLoader and Main
 
 * Loads and validates the four input files.
 * Reports accepted and rejected records.
-* Coordinates the program’s menu and user interaction.
+* Coordinates program initialization and menu interaction.
 
-The facility ID lookup must use the custom hash table. Standard library hash tables and linear scans cannot replace this implementation.
+Facility ID lookups use the custom hash table. Standard library hash tables and linear scans are not used as replacements for the required custom implementation.
 
 TEAM WORKFLOW
 
@@ -136,4 +132,9 @@ CELL MACHINE VERIFICATION
 
 The project must compile and run successfully on the UNT CSE CELL machines before submission.
 
-The exact successful build and run commands, along with testing outcomes, are documented in test_results.txt.
+The build and run commands are:
+
+make
+./campus
+
+Testing outcomes and results are documented in test_results.txt.

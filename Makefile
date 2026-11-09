@@ -1,7 +1,15 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic
+CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic -Iinclude
+
 TARGET = campus
-SOURCES = main.cpp FileLoader.cpp HashTable.cpp Facility.cpp CampusGraph.cpp DepartmentTree.cpp
+
+SOURCES = src/main.cpp \
+          src/FileLoader.cpp \
+          src/HashTable.cpp \
+          src/Facility.cpp \
+          src/CampusGraph.cpp \
+          src/DepartmentTree.cpp
+
 OBJECTS = $(SOURCES:.cpp=.o)
 
 .PHONY: all clean
@@ -11,7 +19,7 @@ all: $(TARGET)
 $(TARGET): $(OBJECTS)
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJECTS)
 
-%.o: %.cpp
+src/%.o: src/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
