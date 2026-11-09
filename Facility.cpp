@@ -1,380 +1,162 @@
 #include "Facility.h"
-
-#include <fstream>
-#include <sstream>
-#include <iomanip>
-#include <algorithm>
+#include "FileLoader.h"
 #include <cctype>
+#include <fstream>
+#include <iostream>
+#include <algorithm>
 
 using namespace std;
 
-// Author: Anthony Davis
+FacilityDatabase::FacilityDatabase() : hashTable(101) {}
 
-// Initializes the facility database.
-FacilityDatabase::FacilityDatabase() : hashTable(101) {
+bool FacilityDatabase::validID(const string& id) {
+    if (id.size() != 4 || (id[0] != 'F' && id[0] != 'f')) return false;
+    return isdigit(static_cast<unsigned char>(id[1])) &&
+           isdigit(static_cast<unsigned char>(id[2])) &&
+           isdigit(static_cast<unsigned char>(id[3]));
 }
 
-// Removes whitespace from the beginning and end of a string.
-string FacilityDatabase::trim(const string& text) const {
-    size_t start = text.find_first_not_of(" \t\r\n");
-
-    if (start == string::npos) {
-        return "";
-    }
-
-    size_t end = text.find_last_not_of(" \t\r\n");
-
-    return text.substr(start, end - start + 1);
+bool FacilityDatabase::containsIgnoreCase(const vector<string>& values,
+                                          const string& value) {
+    for (const string& item : values)
+        if (FileLoader::lower(item) == FileLoader::lower(value)) return true;
+    return false;
 }
 
-// Converts a string to uppercase.
-string FacilityDatabase::normalize(const string& text) const {
-    string result = trim(text);
-
-    for (char& character : result) {
-        character = static_cast<char>(
-            toupper(static_cast<unsigned char>(character))
-        );
-    }
-
-    return result;
-}
-
-// Checks whether an ID follows the F followed by three digits format.
-bool FacilityDatabase::validID(const string& id) const {
-    if (id.length() != 4 || id[0] != 'F') {
-        return false;
-    }
-
-    for (int i = 1; i < 4; i++) {
-        if (!isdigit(static_cast<unsigned char>(id[i]))) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-// Loads facility records from facilities.txt.
-void FacilityDatabase::loadFacilities(
-    const string& filename,
-    const vector<string>& buildings
-) {
-    ifstream file(filename);
-
-    int accepted = 0;
-    int rejected = 0;
-    int lineNumber = 0;
-
-    if (!file.is_open()) {
-        cout << "Error: Could not open " << filename << endl;
-        cout << filename << ": 0 accepted, 0 rejected"
-             << " (hash capacity: " << hashTable.getCapacity()
-             << ", entries: " << hashTable.getEntries()
-             << ", collisions: " << hashTable.getCollisions()
-             << ")" << endl;
+void FacilityDatabase::loadFacilities(const string& filename,
+                                       const vector<string>& buildings) {
+    ifstream input(filename);
+    if (!input) {
+        cerr << "Error: could not open " << filename << ".\n";
         return;
     }
 
     string line;
+    int lineNumber = 0;
+    size_t accepted = 0, rejected = 0;
 
-    while (getline(file, line)) {
-        lineNumber++;
+    while (getline(input, line)) {
+        ++lineNumber;
+        if (FileLoader::isIgnoredLine(line)) continue;
 
-        string cleaned = trim(line);
-
-        if (cleaned.empty()) {
-            continue;
-        }
-
-        if (cleaned[0] == '#') {
-            continue;
-        }
-
-        vector<string> fields;
-        string field;
-        stringstream stream(line);
-
-        while (getline(stream, field, '|')) {
-            fields.push_back(trim(field));
-        }
-
-        if (!line.empty() && line.back() == '|') {
-            fields.push_back("");
-        }
-
+        vector<string> fields = FileLoader::split(line, '|');
         if (fields.size() != 4) {
-            cout << "Warning: " << filename
-                 << " line " << lineNumber
-                 << ": Incorrect number of fields." << endl;
-            rejected++;
+            cerr << "Warning: " << filename << " line " << lineNumber
+                 << ": expected 4 fields.\n";
+            ++rejected;
             continue;
         }
 
-        bool emptyField = false;
+        string id = fields[0], name = fields[1], building = fields[2], category = fields[3];
+        if (!validID(id) || name.empty() || building.empty() || category.empty()) {
+            cerr << "Warning: " << filename << " line " << lineNumber
+                 << ": invalid ID or empty field.\n";
+            ++rejected;
+            continue;
+        }
 
-        for (const string& value : fields) {
-            if (value.empty()) {
-                emptyField = true;
+        bool buildingFound = false;
+        for (const string& known : buildings)
+            if (FileLoader::lower(known) == FileLoader::lower(building)) {
+                building = known;
+                buildingFound = true;
                 break;
             }
-        }
 
-        if (emptyField) {
-            cout << "Warning: " << filename
-                 << " line " << lineNumber
-                 << ": Empty required field." << endl;
-            rejected++;
-            continue;
-        }
-
-        string id = normalize(fields[0]);
-        string name = fields[1];
-        string building = fields[2];
-        string category = fields[3];
-
-        if (!validID(id)) {
-            cout << "Warning: " << filename
-                 << " line " << lineNumber
-                 << ": Invalid ID format. ID must be F followed by exactly three digits."
-                 << endl;
-            rejected++;
-            continue;
-        }
-
-        string acceptedBuilding = "";
-
-        for (const string& existingBuilding : buildings) {
-            if (normalize(existingBuilding) == normalize(building)) {
-                acceptedBuilding = existingBuilding;
-                break;
-            }
-        }
-
-        if (acceptedBuilding.empty()) {
-            cout << "Warning: " << filename
-                 << " line " << lineNumber
-                 << ": Unknown building '" << building << "'."
-                 << endl;
-            rejected++;
+        if (!buildingFound) {
+            cerr << "Warning: " << filename << " line " << lineNumber
+                 << ": building does not exist: " << fields[2] << ".\n";
+            ++rejected;
             continue;
         }
 
         if (hashTable.contains(id)) {
-            cout << "Warning: " << filename
-                 << " line " << lineNumber
-                 << ": Duplicate facility ID " << id << "."
-                 << endl;
-            rejected++;
+            cerr << "Warning: " << filename << " line " << lineNumber
+                 << ": duplicate facility ID " << id << ".\n";
+            ++rejected;
             continue;
         }
 
-        string acceptedCategory = category;
-
-        for (const string& existingCategory : categories) {
-            if (normalize(existingCategory) == normalize(category)) {
-                acceptedCategory = existingCategory;
-                break;
-            }
+        id[0] = 'F';
+        size_t index = facilities.size();
+        if (!hashTable.insert(id, index)) {
+            ++rejected;
+            continue;
         }
 
-        if (acceptedCategory == category) {
-            bool categoryExists = false;
-
-            for (const string& existingCategory : categories) {
-                if (normalize(existingCategory) == normalize(category)) {
-                    categoryExists = true;
-                    break;
-                }
-            }
-
-            if (!categoryExists) {
-                categories.push_back(category);
-            }
-        }
-
-        Facility facility;
-
-        facility.id = id;
-        facility.name = name;
-        facility.building = acceptedBuilding;
-        facility.category = acceptedCategory;
-
-        size_t facilityIndex = facilities.size();
-
-        if (hashTable.insert(id, facilityIndex)) {
-            facilities.push_back(facility);
-            accepted++;
-        }
+        facilities.push_back({id, name, building, category});
+        if (!containsIgnoreCase(categories, category)) categories.push_back(category);
+        ++accepted;
     }
 
-    file.close();
-
-    cout << filename << ": "
-         << accepted << " accepted, "
-         << rejected << " rejected"
-         << " (hash capacity: " << hashTable.getCapacity()
-         << ", entries: " << hashTable.getEntries()
-         << ", collisions: " << hashTable.getCollisions()
-         << ")" << endl;
+    cout << "Facilities: " << accepted << " accepted, "
+         << rejected << " rejected.\n";
 }
 
-// Displays every accepted facility.
 void FacilityDatabase::displayAll() const {
     if (facilities.empty()) {
-        cout << "No facilities are available." << endl;
+        cout << "No facilities loaded.\n";
         return;
     }
-
-    cout << "\n--- All Facilities ---\n";
-
-    for (const Facility& facility : facilities) {
-        cout << facility.id << " | "
-             << facility.name << " | "
-             << facility.building << " | "
-             << facility.category << endl;
-    }
-
-    cout << "Total facilities: " << facilities.size() << endl;
+    for (const Facility& f : facilities)
+        cout << f.id << " | " << f.name << " | " << f.building
+             << " | " << f.category << '\n';
 }
 
-// Searches for a facility by ID using the custom hash table.
-void FacilityDatabase::searchByID(const string& input) const {
-    string id = normalize(input);
-
-    if (!validID(id)) {
-        cout << "Invalid format: an ID is F followed by exactly three digits."
-             << endl;
+void FacilityDatabase::searchByID(const string& id) const {
+    size_t index = 0;
+    if (!hashTable.find(id, index)) {
+        cout << "Facility not found.\n";
         return;
     }
-
-    size_t index;
-
-    if (hashTable.find(id, index)) {
-        const Facility& facility = facilities[index];
-
-        cout << "Found: "
-             << facility.name << " | "
-             << facility.building << " | "
-             << facility.category << endl;
-    }
-    else {
-        cout << "Not found: no facility with ID "
-             << id << endl;
-    }
+    const Facility& f = facilities[index];
+    cout << f.id << " | " << f.name << " | " << f.building
+         << " | " << f.category << '\n';
 }
 
-// Searches by complete facility name, ignoring capitalization.
-void FacilityDatabase::searchByName(const string& input) const {
-    string name = normalize(input);
-
-    if (name.empty()) {
-        cout << "Error: Facility name cannot be blank." << endl;
-        return;
-    }
-
-    int matches = 0;
-
-    for (const Facility& facility : facilities) {
-        if (normalize(facility.name) == name) {
-            cout << facility.id << " | "
-                 << facility.name << " | "
-                 << facility.building << " | "
-                 << facility.category << endl;
-
-            matches++;
+void FacilityDatabase::searchByName(const string& name) const {
+    bool found = false;
+    for (const Facility& f : facilities) {
+        if (FileLoader::lower(f.name) == FileLoader::lower(FileLoader::trim(name))) {
+            cout << f.id << " | " << f.name << " | " << f.building
+                 << " | " << f.category << '\n';
+            found = true;
         }
     }
-
-    if (matches == 0) {
-        cout << "No facilities found with that name." << endl;
-    }
-
-    cout << "Matches: " << matches << endl;
+    if (!found) cout << "No facility with that complete name was found.\n";
 }
 
-// Searches by complete category, ignoring capitalization.
-void FacilityDatabase::searchByCategory(const string& input) const {
-    string category = normalize(input);
-
-    if (category.empty()) {
-        cout << "Error: Category cannot be blank." << endl;
-        return;
-    }
-
-    int matches = 0;
-
-    for (const Facility& facility : facilities) {
-        if (normalize(facility.category) == category) {
-            cout << facility.id << " | "
-                 << facility.name << " | "
-                 << facility.building << " | "
-                 << facility.category << endl;
-
-            matches++;
+void FacilityDatabase::searchByCategory(const string& category) const {
+    bool found = false;
+    for (const Facility& f : facilities) {
+        if (FileLoader::lower(f.category) == FileLoader::lower(FileLoader::trim(category))) {
+            cout << f.id << " | " << f.name << " | " << f.building
+                 << " | " << f.category << '\n';
+            found = true;
         }
     }
-
-    if (matches == 0) {
-        cout << "No facilities found in that category." << endl;
-    }
-
-    cout << "Matches: " << matches << endl;
+    if (!found) cout << "No facilities found in that category.\n";
 }
 
-// Displays category counts and percentages.
 void FacilityDatabase::categoryReport() const {
-    if (facilities.empty()) {
-        cout << "No facilities are available." << endl;
-        cout << "Total: 0" << endl;
+    cout << "\nFacility Category Report\n";
+    cout << "------------------------\n";
+    if (categories.empty()) {
+        cout << "No facility categories available.\n";
         return;
     }
-
-    cout << "\n--- Facility Category Report ---\n";
-
-    cout << left << setw(30) << "Category"
-         << setw(12) << "Count"
-         << "Percentage" << endl;
-
     for (const string& category : categories) {
-        int count = 0;
-
-        for (const Facility& facility : facilities) {
-            if (normalize(facility.category) == normalize(category)) {
-                count++;
-            }
-        }
-
-        double percentage =
-            (static_cast<double>(count) / facilities.size()) * 100.0;
-
-        cout << left << setw(30) << category
-             << setw(12) << count
-             << fixed << setprecision(1)
-             << percentage << "%" << endl;
+        size_t count = 0;
+        for (const Facility& f : facilities)
+            if (FileLoader::lower(f.category) == FileLoader::lower(category)) ++count;
+        cout << category << ": " << count << '\n';
     }
-
-    cout << left << setw(30) << "Total"
-         << setw(12) << facilities.size()
-         << "100.0%" << endl;
+    cout << "Hash table capacity: " << hashTable.getCapacity() << '\n'
+         << "Hash table entries: " << hashTable.getEntries() << '\n'
+         << "Hash collisions: " << hashTable.getCollisions() << '\n';
 }
 
-// Returns the facility vector.
-const vector<Facility>& FacilityDatabase::getFacilities() const {
-    return facilities;
-}
-
-// Returns hash table capacity.
-size_t FacilityDatabase::getHashCapacity() const {
-    return hashTable.getCapacity();
-}
-
-// Returns hash table entries.
-size_t FacilityDatabase::getHashEntries() const {
-    return hashTable.getEntries();
-}
-
-// Returns hash table collisions.
-size_t FacilityDatabase::getHashCollisions() const {
-    return hashTable.getCollisions();
-}
+const vector<Facility>& FacilityDatabase::getFacilities() const { return facilities; }
+size_t FacilityDatabase::getHashCapacity() const { return hashTable.getCapacity(); }
+size_t FacilityDatabase::getHashEntries() const { return hashTable.getEntries(); }
+size_t FacilityDatabase::getHashCollisions() const { return hashTable.getCollisions(); }

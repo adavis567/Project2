@@ -1,46 +1,33 @@
 #ifndef HASHTABLE_H
 #define HASHTABLE_H
 
+#include <cstddef>
 #include <string>
 #include <vector>
-#include <cstddef>
-
-using namespace std;
-
-// Custom hash table using separate chaining.
-// Author: Anthony Davis
 
 class HashTable {
 private:
     struct Entry {
-        string key;
-        size_t index;
+        std::string key;
+        std::size_t index;
     };
 
-    vector<vector<Entry>> table;
-    size_t capacity;
-    size_t entries;
-    size_t collisions;
+    std::vector<std::vector<Entry>> buckets;
+    std::size_t capacity;
+    std::size_t entries;
+    std::size_t collisions;
 
-    size_t hashFunction(const string& key) const;
+    std::size_t hashFunction(const std::string& key) const;
+    static std::string normalize(const std::string& key);
 
 public:
-    // Constructor
-    HashTable(size_t initialCapacity = 101);
-
-    // Inserts an ID and its facility position.
-    bool insert(const string& key, size_t index);
-
-    // Searches for an ID.
-    bool find(const string& key, size_t& index) const;
-
-    // Checks whether an ID exists.
-    bool contains(const string& key) const;
-
-    // Returns table statistics.
-    size_t getCapacity() const;
-    size_t getEntries() const;
-    size_t getCollisions() const;
+    explicit HashTable(std::size_t initialCapacity = 101);
+    bool insert(const std::string& key, std::size_t index);
+    bool find(const std::string& key, std::size_t& index) const;
+    bool contains(const std::string& key) const;
+    std::size_t getCapacity() const;
+    std::size_t getEntries() const;
+    std::size_t getCollisions() const;
 };
 
 #endif

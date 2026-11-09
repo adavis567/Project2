@@ -1,5 +1,5 @@
-#ifndef DEPARTMENT_TREE_H
-#define DEPARTMENT_TREE_H
+#ifndef DEPARTMENTTREE_H
+#define DEPARTMENTTREE_H
 
 #include <string>
 #include <vector>
@@ -10,30 +10,26 @@ private:
         std::string name;
         Node* parent;
         std::vector<Node*> children;
-
-        Node(const std::string& departmentName, Node* parentNode);
+        Node(const std::string& value, Node* parentNode);
     };
 
     Node* root;
-
     Node* findNode(const std::string& name) const;
     void deleteTree(Node* node);
-    void displayPreorder(Node* node, int depth) const;
-    void displayPostorder(Node* node) const;
-    void displayLevelOrder() const;
+    void preorder(Node* node, int depth) const;
+    void postorder(Node* node) const;
     int countNodes(Node* node) const;
+    int height(Node* node) const;
     int getDepth(Node* node) const;
-    std::string trim(const std::string& text) const;
-    std::string toLower(const std::string& text) const;
 
 public:
     DepartmentTree();
     ~DepartmentTree();
+    DepartmentTree(const DepartmentTree&) = delete;
+    DepartmentTree& operator=(const DepartmentTree&) = delete;
 
     bool loadDepartments(const std::string& filename);
-    bool addDepartment(const std::string& name,
-                       const std::string& parentName = "");
-
+    bool addDepartment(const std::string& name, const std::string& parentName = "");
     void searchDepartment(const std::string& name) const;
     void displayHierarchy() const;
     void displayPreorder() const;

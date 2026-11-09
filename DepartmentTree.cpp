@@ -1,382 +1,182 @@
 #include "DepartmentTree.h"
-
-#include <iostream>
+#include "FileLoader.h"
 #include <fstream>
-#include <sstream>
+#include <iostream>
 #include <queue>
 #include <algorithm>
-#include <cctype>
 
 using namespace std;
 
-// Node constructor
-DepartmentTree::Node::Node(const string& departmentName, Node* parentNode) {
-    name = departmentName;
-    parent = parentNode;
-}
+DepartmentTree::Node::Node(const string& value, Node* parentNode)
+    : name(value), parent(parentNode) {}
 
-// Tree constructor
-DepartmentTree::DepartmentTree() {
-    root = nullptr;
-}
+DepartmentTree::DepartmentTree() : root(nullptr) {}
+DepartmentTree::~DepartmentTree() { deleteTree(root); }
 
-// Tree destructor
-DepartmentTree::~DepartmentTree() {
-    deleteTree(root);
-}
-
-// Delete all nodes to prevent memory leaks
 void DepartmentTree::deleteTree(Node* node) {
-    if (node == nullptr) {
-        return;
-    }
-
-    for (Node* child : node->children) {
-        deleteTree(child);
-    }
-
+    if (!node) return;
+    for (Node* child : node->children) deleteTree(child);
     delete node;
 }
 
-// Remove whitespace from beginning and end
-string DepartmentTree::trim(const string& text) const {
-    size_t first = text.find_first_not_of(" \t\r\n");
-
-    if (first == string::npos) {
-        return "";
-    }
-
-    size_t last = text.find_last_not_of(" \t\r\n");
-
-    return text.substr(first, last - first + 1);
-}
-
-// Convert text to lowercase for case-insensitive comparisons
-string DepartmentTree::toLower(const string& text) const {
-    string result = text;
-
-    transform(result.begin(), result.end(), result.begin(),
-        [](unsigned char c) {
-            return static_cast<char>(tolower(c));
-        });
-
-    return result;
-}
-
-// Find a department anywhere in the tree
-DepartmentTree::Node* DepartmentTree::findNode(
-    const string& name) const {
-
-    if (root == nullptr) {
-        return nullptr;
-    }
-
+DepartmentTree::Node* DepartmentTree::findNode(const string& name) const {
+    if (!root) return nullptr;
+    const string target = FileLoader::lower(FileLoader::trim(name));
     queue<Node*> q;
     q.push(root);
-
     while (!q.empty()) {
         Node* current = q.front();
         q.pop();
-
-        if (toLower(current->name) == toLower(name)) {
-            return current;
-        }
-
-        for (Node* child : current->children) {
-            q.push(child);
-        }
+        if (FileLoader::lower(current->name) == target) return current;
+        for (Node* child : current->children) q.push(child);
     }
-
     return nullptr;
 }
 
-// Add a department
-bool DepartmentTree::addDepartment(
-    const string& name,
-    const string& parentName) {
+bool DepartmentTree::addDepartment(const string& name, const string& parentName) {
+    string cleanName = FileLoader::trim(name);
+    string cleanParent = FileLoader::trim(parentName);
+    if (cleanName.empty() || findNode(cleanName)) return false;
 
-    string cleanName = trim(name);
-    string cleanParent = trim(parentName);
-
-    if (cleanName.empty()) {
-        cout << "Error: Department name cannot be empty.\n";
-        return false;
-    }
-
-    if (findNode(cleanName) != nullptr) {
-        cout << "Error: Department already exists.\n";
-        return false;
-    }
-
-    // Create root if tree is empty
-    if (root == nullptr) {
-        if (!cleanParent.empty()) {
-            cout << "Error: Root department cannot have a parent.\n";
-            return false;
-        }
-
+    if (!root) {
+        if (!cleanParent.empty()) return false;
         root = new Node(cleanName, nullptr);
-
-        cout << "Root department added successfully.\n";
         return true;
     }
 
-    // A parent must be provided
-    if (cleanParent.empty()) {
-        cout << "Error: Please provide an existing parent department.\n";
-        return false;
-    }
-
-    Node* parentNode = findNode(cleanParent);
-
-    if (parentNode == nullptr) {
-        cout << "Error: Parent department not found.\n";
-        return false;
-    }
-
-    Node* newNode = new Node(cleanName, parentNode);
-    parentNode->children.push_back(newNode);
-
-    cout << "Department added successfully.\n";
+    if (cleanParent.empty()) return false;
+    Node* parent = findNode(cleanParent);
+    if (!parent) return false;
+    parent->children.push_back(new Node(cleanName, parent));
     return true;
 }
 
-// Load departments from a file
 bool DepartmentTree::loadDepartments(const string& filename) {
-    ifstream file(filename);
-
-    if (!file.is_open()) {
-        cerr << "Error: Could not open " << filename << endl;
+    ifstream input(filename);
+    if (!input) {
+        cerr << "Error: could not open " << filename << ".\n";
         return false;
     }
 
     string line;
     int lineNumber = 0;
-    int loaded = 0;
-
-    while (getline(file, line)) {
-        lineNumber++;
-
-        string cleanLine = trim(line);
-
-        // Ignore blank lines and comments
-        if (cleanLine.empty() || cleanLine[0] == '#') {
+    size_t accepted = 0, rejected = 0;
+    while (getline(input, line)) {
+        ++lineNumber;
+        if (FileLoader::isIgnoredLine(line)) continue;
+        vector<string> fields = FileLoader::split(line, '|');
+        if (fields.size() != 2 || fields[0].empty() || fields[1].empty()) {
+            cerr << "Warning: " << filename << " line " << lineNumber
+                 << ": expected DepartmentName|ParentName.\n";
+            ++rejected;
             continue;
         }
 
-        size_t separator = cleanLine.find('|');
-
-        if (separator == string::npos) {
-            cerr << "Warning: " << filename
-                 << " line " << lineNumber
-                 << ": Missing | separator.\n";
-            continue;
+        bool added = false;
+        if (!root) {
+            if (FileLoader::lower(fields[1]) == "none")
+                added = addDepartment(fields[0]);
+        } else if (FileLoader::lower(fields[1]) != "none") {
+            added = addDepartment(fields[0], fields[1]);
         }
 
-        string departmentName = trim(cleanLine.substr(0, separator));
-        string parentName = trim(cleanLine.substr(separator + 1));
-
-        if (departmentName.empty() || parentName.empty()) {
-            cerr << "Warning: " << filename
-                 << " line " << lineNumber
-                 << ": Missing department or parent name.\n";
-            continue;
-        }
-
-        // First accepted department must be the root
-        if (root == nullptr) {
-            if (toLower(parentName) != "none") {
-                cerr << "Warning: " << filename
-                     << " line " << lineNumber
-                     << ": First department must have NONE as parent.\n";
-                continue;
-            }
-
-            if (addDepartment(departmentName)) {
-                loaded++;
-            }
-        }
+        if (added) ++accepted;
         else {
-            if (toLower(parentName) == "none") {
-                cerr << "Warning: " << filename
-                     << " line " << lineNumber
-                     << ": Only the root can have NONE as parent.\n";
-                continue;
-            }
-
-            if (addDepartment(departmentName, parentName)) {
-                loaded++;
-            }
+            cerr << "Warning: " << filename << " line " << lineNumber
+                 << ": duplicate department, invalid root, or parent not yet loaded.\n";
+            ++rejected;
         }
     }
 
-    file.close();
-
-    cout << loaded << " departments loaded successfully.\n";
-
-    return loaded > 0;
+    cout << "Departments: " << accepted << " accepted, "
+         << rejected << " rejected.\n";
+    return accepted > 0;
 }
 
-// Search for a department
 void DepartmentTree::searchDepartment(const string& name) const {
-    Node* found = findNode(trim(name));
-
-    if (found == nullptr) {
+    Node* found = findNode(name);
+    if (!found) {
         cout << "Department not found.\n";
         return;
     }
-
-    cout << "\nDepartment: " << found->name << endl;
-
-    if (found->parent == nullptr) {
-        cout << "Parent: None\n";
-    }
-    else {
-        cout << "Parent: " << found->parent->name << endl;
-    }
-
-    cout << "Direct children: "
-         << found->children.size() << endl;
-
-    cout << "Depth: " << getDepth(found) << endl;
+    cout << "Department: " << found->name << '\n'
+         << "Parent: " << (found->parent ? found->parent->name : "None") << '\n'
+         << "Direct children: " << found->children.size() << '\n'
+         << "Depth: " << getDepth(found) << '\n';
 }
 
-// Get the depth of a department
 int DepartmentTree::getDepth(Node* node) const {
     int depth = 0;
-
-    while (node != nullptr && node->parent != nullptr) {
-        depth++;
+    while (node && node->parent) {
+        ++depth;
         node = node->parent;
     }
-
     return depth;
 }
 
-// Display the full hierarchy
-void DepartmentTree::displayPreorder(Node* node, int depth) const {
-    if (node == nullptr) {
-        return;
-    }
-
-    for (int i = 0; i < depth; i++) {
-        cout << "    ";
-    }
-
-    cout << node->name << endl;
-
-    for (Node* child : node->children) {
-        displayPreorder(child, depth + 1);
-    }
+void DepartmentTree::preorder(Node* node, int depth) const {
+    if (!node) return;
+    cout << string(static_cast<size_t>(depth) * 2, ' ') << node->name << '\n';
+    for (Node* child : node->children) preorder(child, depth + 1);
 }
 
 void DepartmentTree::displayHierarchy() const {
-    if (root == nullptr) {
-        cout << "Department tree is empty.\n";
-        return;
-    }
-
-    cout << "\nDepartment Hierarchy:\n";
-    displayPreorder(root, 0);
+    if (!root) { cout << "Department tree is empty.\n"; return; }
+    cout << "Department Hierarchy:\n";
+    preorder(root, 0);
 }
 
-// Display preorder traversal
 void DepartmentTree::displayPreorder() const {
-    if (root == nullptr) {
-        cout << "Department tree is empty.\n";
-        return;
-    }
-
-    cout << "Preorder Traversal: ";
-
-    queue<Node*> q;
-    q.push(root);
-
-    // Recursive preorder traversal
-    cout << endl;
-    displayPreorder(root, 0);
+    if (!root) { cout << "Department tree is empty.\n"; return; }
+    cout << "Preorder Traversal:\n";
+    preorder(root, 0);
 }
 
-// Postorder helper
-void DepartmentTree::displayPostorder(Node* node) const {
-    if (node == nullptr) {
-        return;
-    }
-
-    for (Node* child : node->children) {
-        displayPostorder(child);
-    }
-
-    cout << node->name << " ";
+void DepartmentTree::postorder(Node* node) const {
+    if (!node) return;
+    for (Node* child : node->children) postorder(child);
+    cout << node->name << '\n';
 }
 
-// Postorder traversal
 void DepartmentTree::displayPostorder() const {
-    if (root == nullptr) {
-        cout << "Department tree is empty.\n";
-        return;
-    }
-
-    cout << "Postorder Traversal: ";
-    displayPostorder(root);
-    cout << endl;
+    if (!root) { cout << "Department tree is empty.\n"; return; }
+    cout << "Postorder Traversal:\n";
+    postorder(root);
 }
 
-// Level-order traversal
 void DepartmentTree::displayLevelOrder() const {
-    if (root == nullptr) {
-        cout << "Department tree is empty.\n";
-        return;
-    }
-
-    cout << "Level-order Traversal: ";
-
+    if (!root) { cout << "Department tree is empty.\n"; return; }
+    cout << "Level-order Traversal:\n";
     queue<Node*> q;
     q.push(root);
-
     while (!q.empty()) {
         Node* current = q.front();
         q.pop();
-
-        cout << current->name << " ";
-
-        for (Node* child : current->children) {
-            q.push(child);
-        }
+        cout << current->name << '\n';
+        for (Node* child : current->children) q.push(child);
     }
-
-    cout << endl;
 }
 
-// Count all departments
 int DepartmentTree::countNodes(Node* node) const {
-    if (node == nullptr) {
-        return 0;
-    }
-
+    if (!node) return 0;
     int count = 1;
-
-    for (Node* child : node->children) {
-        count += countNodes(child);
-    }
-
+    for (Node* child : node->children) count += countNodes(child);
     return count;
 }
 
-// Display department statistics
+int DepartmentTree::height(Node* node) const {
+    if (!node) return 0;
+    int maximum = 0;
+    for (Node* child : node->children)
+        maximum = max(maximum, height(child));
+    return maximum + 1;
+}
+
 void DepartmentTree::displayStatistics() const {
-    if (root == nullptr) {
-        cout << "Department tree is empty.\n";
-        return;
-    }
-
-    int total = countNodes(root);
-
-    cout << "\nDepartment Statistics\n";
-    cout << "---------------------\n";
-    cout << "Total departments: " << total << endl;
-    cout << "Root department: " << root->name << endl;
-
-    cout << "Root direct children: "
-         << root->children.size() << endl;
+    if (!root) { cout << "Department tree is empty.\n"; return; }
+    cout << "Department Tree Statistics\n"
+         << "Total departments: " << countNodes(root) << '\n'
+         << "Root department: " << root->name << '\n'
+         << "Root direct children: " << root->children.size() << '\n'
+         << "Tree height (levels): " << height(root) << '\n';
 }
